@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Followup — AI CRM Copilot</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #08080f;
+    --surface:   #0f0f1a;
+    --border:    #1e1e30;
+    --border-hi: #2e2e48;
+    --text:      #eeeef5;
+    --muted:     #6b6b90;
+    --blue:      #4f8cff;
+    --blue-glow: rgba(79,140,255,0.15);
+    --green:     #34d399;
+    --green-glow:rgba(52,211,153,0.12);
+    --amber:     #fbbf24;
+    --amber-glow:rgba(251,191,36,0.12);
+    --radius:    14px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* ── Background noise ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Gradient orbs ── */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.35;
+  }
+  .orb-1 { width: 600px; height: 600px; background: #1a1a6e; top: -200px; left: -200px; }
+  .orb-2 { width: 400px; height: 400px; background: #0d3b3b; bottom: -100px; right: -100px; }
+
+  /* ── Layout ── */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 64px 32px 80px;
+  }
+
+  /* ── Header ── */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 72px;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  .logo span {
+    color: var(--blue);
+  }
+
+  .badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(79,140,255,0.1);
+    border: 1px solid rgba(79,140,255,0.2);
+    color: var(--blue);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* ── Hero ── */
+  .hero {
+    margin-bottom: 56px;
+  }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(36px, 6vw, 58px);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -1.5px;
+    color: var(--text);
+    margin-bottom: 16px;
+  }
+
+  .hero h1 em {
+    font-style: normal;
+    background: linear-gradient(135deg, #4f8cff 0%, #34d399 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero p {
+    color: var(--muted);
+    font-size: 17px;
+    font-weight: 300;
+    max-width: 480px;
+    line-height: 1.6;
+  }
+
+  /* ── Input card ── */
+  .input-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 32px;
+    transition: border-color 0.2s;
+  }
+
+  .input-card:focus-within {
+    border-color: var(--border-hi);
+  }
+
+  .input-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .input-label .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--blue);
+  }
+
+  textarea {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.7;
+    resize: vertical;
+    min-height: 180px;
+    caret-color: var(--blue);
+  }
+
+  textarea::placeholder {
+    color: #3a3a55;
+  }
+
+  .input-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .char-count {
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ── Button ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--blue);
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 24px;
+    border-radius: 10px;
+    border: none;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 0 0 0 var(--blue-glow);
+  }
+
+  .btn:hover:not(:disabled) {
+    opacity: 0.92;
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px var(--blue-glow);
+  }
+
+  .btn:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .btn .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  .btn.loading .spinner { display: block; }
+  .btn.loading .btn-text { opacity: 0.7; }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── Results grid ── */
+  .results {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+  }
+
+  .results.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .result-card:hover {
+    border-color: var(--border-hi);
+  }
+
+  .card-email  { border-top: 2px solid var(--blue); }
+  .card-steps  { border-top: 2px solid var(--green); }
+  .card-risks  { border-top: 2px solid var(--amber); }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .card-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .card-email .card-icon  { background: var(--blue-glow); }
+  .card-steps .card-icon  { background: var(--green-glow); }
+  .card-risks .card-icon  { background: var(--amber-glow); }
+
+  .card-email .card-title { color: var(--blue); }
+  .card-steps .card-title { color: var(--green); }
+  .card-risks .card-title { color: var(--amber); }
+
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: 'Outfit', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .copy-btn:hover {
+    border-color: var(--border-hi);
+    color: var(--text);
+  }
+
+  .copy-btn.copied {
+    border-color: var(--green);
+    color: var(--green);
+  }
+
+  .card-body {
+    font-size: 14px;
+    line-height: 1.65;
+    color: #c8c8e0;
+    flex: 1;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* Lists for next steps / risks */
+  .card-body ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .card-body ul li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  .card-body ul li::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-top: 7px;
+    flex-shrink: 0;
+  }
+
+  .card-steps .card-body ul li::before { background: var(--green); }
+  .card-risks .card-body ul li::before { background: var(--amber); }
+
+  /* Skeleton loader */
+  .skeleton {
+    background: linear-gradient(90deg, var(--border) 25%, var(--border-hi) 50%, var(--border) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: 6px;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  .skeleton-line { height: 13px; margin-bottom: 10px; }
+  .skeleton-line:last-child { width: 60%; margin-bottom: 0; }
+
+  /* ── Empty / error states ── */
+  .state-msg {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ── Footer ── */
+  footer {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 32px;
+    color: var(--muted);
+    font-size: 12px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 780px) {
+    .container { padding: 40px 20px 60px; }
+    .hero h1 { font-size: 36px; letter-spacing: -1px; }
+    .results { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="container">
+
+  <nav>
+    <div class="logo">follow<span>up</span></div>
+    <div class="badge">AI Copilot</div>
+  </nav>
+
+  <div class="hero">
+    <h1>Turn call notes into<br><em>pipeline momentum.</em></h1>
+    <p>Paste your call notes. Get a follow-up email, clear next steps, and deal risk signals — in seconds.</p>
+  </div>
+
+  <div class="input-card">
+    <div class="input-label">
+      <span class="dot"></span>
+      Call Notes
+    </div>
+    <textarea id="notes" placeholder="e.g. Spoke with Sarah from Acme. She's the VP of Sales, team of 12 reps. Currently using Salesforce but frustrated with the reporting. Budget approved for Q3, needs sign-off from CTO who she said is skeptical about switching tools. Demo went well, she loved the pipeline view. Asked about API integrations with HubSpot. Competitor Pipedrive also in the mix. Follow up in 2 weeks..."></textarea>
+    <div class="input-footer">
+      <span class="char-count" id="char-count">0 characters</span>
+      <button class="btn" id="analyze-btn" onclick="analyze()">
+        <div class="spinner"></div>
+        <span class="btn-text">Analyze call →</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="result-card card-email">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-icon">✉</div>
+          Follow-up Email
+        </div>
+        <button class="copy-btn" onclick="copyCard('email-body', this)">Copy</button>
+      </div>
+      <div class="card-body" id="email-body">
+        <div class="state-msg">Your follow-up email will appear here.</div>
+      </div>
+    </div>
+
+    <div class="result-card card-steps">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-icon">→</div>
+          Next Steps
+        </div>
+        <button class="copy-btn" onclick="copyCard('steps-body', this)">Copy</button>
+      </div>
+      <div class="card-body" id="steps-body">
+        <div class="state-msg">Action items will appear here.</div>
+      </div>
+    </div>
+
+    <div class="result-card card-risks">
+      <div class="card-header">
+        <div class="card-title">
+          <div class="card-icon">⚠</div>
+          Risk Signals
+        </div>
+        <button class="copy-btn" onclick="copyCard('risks-body', this)">Copy</button>
+      </div>
+      <div class="card-body" id="risks-body">
+        <div class="state-msg">Deal risks will appear here.</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Built with Claude API · followup copilot
+</footer>
+
+<script>
+  // ── Char counter ──────────────────────────────────────────────────────────
+  const notes = document.getElementById('notes');
+  const charCount = document.getElementById('char-count');
+
+  notes.addEventListener('input', () => {
+    charCount.textContent = `${notes.value.length.toLocaleString()} characters`;
+  });
+
+  // ── Skeleton loader ───────────────────────────────────────────────────────
+  function showSkeletons() {
+    ['email-body', 'steps-body', 'risks-body'].forEach(id => {
+      document.getElementById(id).innerHTML = `
+        <div class="skeleton skeleton-line" style="width:90%"></div>
+        <div class="skeleton skeleton-line" style="width:75%"></div>
+        <div class="skeleton skeleton-line" style="width:85%"></div>
+        <div class="skeleton skeleton-line" style="width:60%"></div>
+        <div class="skeleton skeleton-line"></div>
+      `;
+    });
+    document.getElementById('results').classList.add('visible');
+  }
+
+  // ── Render results ────────────────────────────────────────────────────────
+  function renderResults(data) {
+    // Email
+    document.getElementById('email-body').textContent = data.email || 'Could not generate email.';
+
+    // Next steps as list
+    const stepsEl = document.getElementById('steps-body');
+    if (data.next_steps && data.next_steps.length) {
+      stepsEl.innerHTML = '<ul>' + data.next_steps.map(s => `<li><span>${s}</span></li>`).join('') + '</ul>';
+    } else {
+      stepsEl.textContent = 'No next steps identified.';
+    }
+
+    // Risks as list
+    const risksEl = document.getElementById('risks-body');
+    if (data.risk_signals && data.risk_signals.length) {
+      risksEl.innerHTML = '<ul>' + data.risk_signals.map(r => `<li><span>${r}</span></li>`).join('') + '</ul>';
+    } else {
+      risksEl.innerHTML = '<div class="state-msg" style="padding:0;text-align:left">No significant risks detected.</div>';
+    }
+  }
+
+  // ── Copy ──────────────────────────────────────────────────────────────────
+  function copyCard(id, btn) {
+    const el = document.getElementById(id);
+    const text = el.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2000);
+    });
+  }
+
+  // ── Main analyze ──────────────────────────────────────────────────────────
+  async function analyze() {
+    const text = notes.value.trim();
+    if (!text) {
+      notes.focus();
+      return;
+    }
+
+    const btn = document.getElementById('analyze-btn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    showSkeletons();
+
+    const systemPrompt = `You are a CRM assistant that helps sales reps after customer calls.
+Given call notes, return ONLY a valid JSON object with exactly these three keys:
+
+{
+  "email": "A professional, warm follow-up email from the sales rep to the contact. Include subject line as first line prefixed with 'Subject: '. 3–5 short paragraphs. No placeholders.",
+  "next_steps": ["Array of 3–5 specific, actionable next steps the sales rep should take, in priority order."],
+  "risk_signals": ["Array of 2–4 deal risk signals detected from the notes. Be specific. If no risks, return empty array."]
+}
+
+Rules:
+- Return ONLY the JSON object, no markdown, no backticks, no preamble.
+- Write the email as if you ARE the sales rep — first person, personal, specific to the notes.
+- Next steps must be concrete actions with implied timelines where possible.
+- Risk signals must reference specific things from the notes, not generic risks.`;
+
+    try {
+      const response = await fetch('/.netlify/functions/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system: systemPrompt,
+          messages: [{ role: 'user', content: text }]
+        })
+      });
+
+      const raw = await response.json();
+      const content = raw?.content?.[0]?.text || '';
+
+      let parsed;
+      try {
+        parsed = JSON.parse(content.replace(/```json|```/g, '').trim());
+      } catch {
+        throw new Error('Could not parse response. Try again.');
+      }
+
+      renderResults(parsed);
+
+    } catch (err) {
+      ['email-body', 'steps-body', 'risks-body'].forEach(id => {
+        document.getElementById(id).innerHTML = `<div class="state-msg" style="color:#f56565">${err.message || 'Something went wrong. Please try again.'}</div>`;
+      });
+    } finally {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+    }
+  }
+
+  // ── Enter shortcut (Cmd/Ctrl + Enter) ─────────────────────────────────────
+  notes.addEventListener('keydown', e => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') analyze();
+  });
+</script>
+
+</body>
+</html>
